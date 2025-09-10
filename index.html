@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PREMIUM ADS REWARD</title>
+<script src="//libtl.com/sdk.js" data-zone="9847944" data-sdk="show_9847944"></script>
+<style>
+:root {
+  --dark-bg: #1C1C1C;
+  --dark-bg-alt: #2B2B2B;
+  --light-bg: #FFFFFF;
+  --light-bg-alt: #F5F5F5;
+  --gradient-start: #4f46e5;
+  --gradient-end: #3b82f6;
+  --text-color-dark: #FFFFFF;
+  --text-color-light: #1C1C1C;
+}
+
+body {
+  margin:0;
+  font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  transition: background 0.5s, color 0.5s;
+}
+
+body.light { background-color: var(--light-bg); color: var(--text-color-light);}
+body.dark { background-color: var(--dark-bg); color: var(--text-color-dark);}
+
+.container { text-align:center; }
+
+.circle-progress {
+  width:180px; height:180px; border-radius:50%;
+  display:flex; justify-content:center; align-items:center;
+  font-size:42px; font-weight:bold;
+  background: conic-gradient(var(--gradient-start) 0%, var(--dark-bg-alt) 0%);
+  margin:0 auto 25px;
+  color: var(--text-color-dark);
+  transition: background 0.5s, transform 0.3s;
+  box-shadow: 0 0 25px rgba(0,0,0,0.4), inset 0 0 15px rgba(0,0,0,0.3);
+  position: relative;
+}
+
+.circle-progress::before {
+  content:'';
+  position:absolute; width:140px; height:140px;
+  background:inherit; border-radius:50%;
+  z-index:1; background-color: var(--dark-bg-alt);
+}
+
+.circle-progress span {
+  position:absolute; z-index:2;
+}
+
+.ads-button {
+  padding:16px 28px; font-size:18px; font-weight:bold;
+  color:#fff; background:linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  border:none; border-radius:16px; cursor:pointer;
+  transition: all 0.3s; box-shadow:0 5px 15px rgba(0,0,0,0.3);
+  text-transform: uppercase;
+}
+
+.ads-button:hover { transform: scale(1.05); box-shadow:0 8px 25px rgba(0,0,0,0.4);}
+.ads-button.disabled { background: grey; cursor:not-allowed;}
+
+#rewardDiv { display:none; margin-top:20px; font-size:22px; font-weight:bold; color: #4f46e5; text-transform: uppercase;}
+#rewardDiv a {
+  color: #2563eb;
+  font-weight: bold;
+  text-decoration: underline;
+}
+#rewardDiv a:hover {
+  color: #1d4ed8;
+}
+
+#adModal {
+  position:fixed; top:0; left:0; right:0; bottom:0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(12px);
+  color:#fff; display:flex; flex-direction:column;
+  justify-content:center; align-items:center;
+  font-size:18px; z-index:9999;
+  opacity:0; visibility:hidden; transition: opacity 0.5s;
+  border-radius: 12px;
+}
+
+#adModal.show { opacity:1; visibility:visible; }
+
+#adSpinner {
+  width:80px; height:80px;
+  border:8px solid rgba(255,255,255,0.2);
+  border-top-color:#4f46e5; border-radius:50%;
+  animation: spin 1s linear infinite; margin-bottom:20px;
+  box-shadow:0 0 25px rgba(79,70,229,0.6);
+}
+
+#adCloseBtn {
+  padding:14px 32px; font-size:16px; border:none;
+  border-radius:12px; background:linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  color:#fff; cursor:pointer; display:none; margin-top:20px; transition: transform 0.2s;
+  text-transform: uppercase;
+}
+
+#adCloseBtn:hover{ transform:scale(1.05); }
+
+@keyframes spin {0%{transform:rotate(0deg);} 100%{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="circle-progress" id="circleProgress"><span>0</span></div>
+  <button class="ads-button" id="adsButton">WATCH 5 ADS AND CLAIM REWARD</button>
+  <div id="rewardDiv">REWARD CLAIMED!</div>
+</div>
+
+<div id="adModal">
+  <div id="adModalTitle">LOADING AD...</div>
+  <div id="adStatusMessage">PLEASE WAIT WHILE WE LOAD THE AD</div>
+  <div id="adSpinner"></div>
+  <button id="adCloseBtn">CLOSE</button>
+</div>
+
+<script>
+const circleProgress = document.getElementById('circleProgress');
+const progressText = circleProgress.querySelector('span');
+const adsButton = document.getElementById('adsButton');
+const rewardDiv = document.getElementById('rewardDiv');
+const adModal = document.getElementById('adModal');
+const adModalTitle = document.getElementById('adModalTitle');
+const adStatusMessage = document.getElementById('adStatusMessage');
+const adSpinner = document.getElementById('adSpinner');
+const adCloseBtn = document.getElementById('adCloseBtn');
+
+let adCount = 0, adsWatched = 0, totalAds = 5, countdown = 12;
+let adWatchedSuccessfully = false, adRewardPending = true;
+const MONETAG_AD_FUNCTION_NAME = "show_9847944";
+
+const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+document.body.classList.add(prefersDark ? "dark" : "light");
+
+function updateCircleProgress(){
+  progressText.textContent = adCount;
+  const percent = (adCount / totalAds) * 100;
+  circleProgress.style.background = `conic-gradient(var(--gradient-start) 0% ${percent}%, var(--dark-bg-alt) ${percent}% 100%)`;
+}
+
+function startCountdown(){
+  adsButton.classList.add('disabled');
+  let countdownInterval = setInterval(()=>{
+    adsButton.textContent = `NEXT AD IN ${countdown}s`;
+    countdown--;
+    if(countdown<0){
+      clearInterval(countdownInterval);
+      countdown=12;
+      adsButton.classList.remove('disabled');
+      if(adsWatched<totalAds) adsButton.textContent="WATCH 5 ADS AND CLAIM REWARD";
+    }
+  },1000);
+}
+
+function openAdModal(title){
+  adModalTitle.textContent = title.toUpperCase();
+  adStatusMessage.textContent = "PLEASE WAIT WHILE WE LOAD THE AD";
+  adSpinner.style.display='block';
+  adCloseBtn.style.display='none';
+  adModal.classList.add('show');
+}
+
+function closeAdModal(){ adModal.classList.remove('show'); }
+
+function handleAdError(msg){
+  if(adRewardPending){
+    adSpinner.style.display='none';
+    adStatusMessage.textContent = msg.toUpperCase();
+    adModalTitle.textContent = "AD ERROR";
+    adCloseBtn.style.display='block';
+    adWatchedSuccessfully=false;
+    adRewardPending=false;
+  }
+}
+
+async function showAd(){
+  adWatchedSuccessfully=false;
+  adRewardPending=true;
+  openAdModal("LAUNCHING AD...");
+
+  if(MONETAG_AD_FUNCTION_NAME && typeof window[MONETAG_AD_FUNCTION_NAME]==='function'){
+    try{
+      const adPromise = window[MONETAG_AD_FUNCTION_NAME]();
+      if(adPromise && typeof adPromise.then==='function'){
+        adModalTitle.textContent = "AD PLAYING";
+        adStatusMessage.textContent = "PLEASE WATCH THE FULL AD TO CLAIM YOUR REWARD";
+        adPromise.then(()=>{
+          adWatchedSuccessfully=true;
+          if(adRewardPending){
+            adSpinner.style.display='none';
+            adStatusMessage.textContent = "AD COMPLETED! CLOSE TO CLAIM YOUR REWARD";
+            adCloseBtn.style.display='block';
+          }
+        }).catch(err=>{
+          handleAdError("AD CLOSED TOO SOON OR ERROR OCCURRED. NO POINTS AWARDED.");
+          console.error("Monetag ad error:",err);
+        });
+      } else {
+        setTimeout(()=>{
+          if(adRewardPending){
+            adSpinner.style.display='none';
+            adStatusMessage.textContent = "AD COMPLETED! CLOSE TO CLAIM YOUR REWARD";
+            adCloseBtn.style.display='block';
+            adWatchedSuccessfully=true;
+          }
+        },7000);
+      }
+    } catch(err){ handleAdError("ERROR LOADING AD. PLEASE TRY AGAIN."); console.error(err);}
+  } else {
+    adModalTitle.textContent = "SIMULATING AD...";
+    adStatusMessage.textContent = "AD WILL FINISH IN 5 SECONDS (SIMULATION).";
+    setTimeout(()=>{
+      if(adRewardPending){
+        adSpinner.style.display='none';
+        adStatusMessage.textContent = "SIMULATED AD COMPLETED! CLOSE TO CLAIM YOUR REWARD";
+        adCloseBtn.style.display='block';
+        adWatchedSuccessfully=true;
+      }
+    },5000);
+  }
+}
+
+adCloseBtn.addEventListener('click', ()=>{
+  closeAdModal();
+  if(adWatchedSuccessfully){
+    adsWatched++;
+    adCount++;
+    updateCircleProgress();
+    if(adsWatched===totalAds){
+      adsButton.style.display = "none"; 
+      rewardDiv.style.display='block';
+      rewardDiv.innerHTML = ' Unzip Password : 8899$$<br>Your Reward Link: <a href="https://t.me/RAKIB_TECHNOLOGY/11" target="_blank">https://t.me/RAKIB_TECHNOLOGY/11</a>';
+    } else {
+      startCountdown();
+    }
+  }
+});
+
+adsButton.addEventListener('click', ()=>{
+  if(adsButton.classList.contains('disabled')) return;
+  if(adsWatched<totalAds) showAd();
+  else rewardDiv.style.display='block';
+});
+
+updateCircleProgress();
+</script>
+</body>
+</html>
